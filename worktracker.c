@@ -1,4 +1,3 @@
-// timetracker.c
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -858,7 +857,7 @@ void show_history() {
         if (has_temp) {
             printf(" (excluding day in progress)");
         }
-        printf("\n");
+        printf("\n"); 
     }
     
     printf("========================================================================================================\n");
