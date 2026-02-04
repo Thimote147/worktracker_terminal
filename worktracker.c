@@ -454,6 +454,268 @@ void add_past_day() {
     free(entries);
 }
 
+void modify_entry() {
+    FILE *file = fopen(data_file_path, "rb");
+    if (!file) {
+        printf("\nNo history found.\n");
+        return;
+    }
+    
+    // Load all entries
+    WorkDay *entries = NULL;
+    int count = 0;
+    int capacity = 10;
+    entries = malloc(capacity * sizeof(WorkDay));
+    
+    WorkDay temp;
+    while (fread(&temp, sizeof(WorkDay), 1, file) == 1) {
+        if (count >= capacity) {
+            capacity *= 2;
+            entries = realloc(entries, capacity * sizeof(WorkDay));
+        }
+        entries[count++] = temp;
+    }
+    fclose(file);
+    
+    if (count == 0) {
+        printf("\nNo entries to modify.\n");
+        free(entries);
+        return;
+    }
+    
+    // Display all entries with numbers
+    printf("\n=== MODIFY ENTRY ===\n\n");
+    printf("Available entries:\n");
+    printf("========================================================================================================\n");
+    printf("ID | Date       | Start  | Lunch      | End    | Time worked | Difference\n");
+    printf("========================================================================================================\n");
+    
+    for (int i = 0; i < count; i++) {
+        printf("%2d | %s | %02d:%02d  | %02d:%02d-%02d:%02d | %02d:%02d  | %02d:%02d        | ",
+               i + 1,
+               entries[i].date,
+               entries[i].start_hour, entries[i].start_min,
+               entries[i].lunch_start_hour, entries[i].lunch_start_min,
+               entries[i].lunch_end_hour, entries[i].lunch_end_min,
+               entries[i].end_hour, entries[i].end_min,
+               entries[i].worked_minutes / 60, entries[i].worked_minutes % 60);
+        print_time_diff(entries[i].excess_minutes);
+        printf("\n");
+    }
+    printf("========================================================================================================\n");
+    
+    // Ask which entry to modify
+    printf("\nEnter the ID of the entry to modify (or 0 to cancel): ");
+    int id;
+    if (scanf("%d", &id) != 1) {
+        clear_input_buffer();
+        printf("Invalid input\n");
+        free(entries);
+        return;
+    }
+    clear_input_buffer();
+    
+    if (id == 0) {
+        free(entries);
+        return;
+    }
+    
+    if (id < 1 || id > count) {
+        printf("Invalid ID\n");
+        free(entries);
+        return;
+    }
+    
+    int index = id - 1;
+    WorkDay *day = &entries[index];
+    
+    printf("\n=== MODIFYING: %s ===\n", day->date);
+    printf("Current values:\n");
+    printf("  Arrival:     %02d:%02d\n", day->start_hour, day->start_min);
+    printf("  Lunch start: %02d:%02d\n", day->lunch_start_hour, day->lunch_start_min);
+    printf("  Lunch end:   %02d:%02d\n", day->lunch_end_hour, day->lunch_end_min);
+    printf("  Departure:   %02d:%02d\n", day->end_hour, day->end_min);
+    printf("\n");
+    
+    // Menu for what to modify
+    printf("What do you want to modify?\n");
+    printf("1. Arrival time\n");
+    printf("2. Lunch break start\n");
+    printf("3. Lunch break end\n");
+    printf("4. Departure time\n");
+    printf("5. Modify all times\n");
+    printf("6. Delete this entry\n");
+    printf("0. Cancel\n");
+    printf("\nChoice: ");
+    
+    int choice;
+    if (scanf("%d", &choice) != 1) {
+        clear_input_buffer();
+        printf("Invalid input\n");
+        free(entries);
+        return;
+    }
+    clear_input_buffer();
+    
+    switch (choice) {
+        case 0:
+            free(entries);
+            return;
+            
+        case 1:
+            printf("\nNew arrival time (HH:MM): ");
+            if (scanf("%d:%d", &day->start_hour, &day->start_min) != 2) {
+                clear_input_buffer();
+                printf("Invalid format\n");
+                free(entries);
+                return;
+            }
+            clear_input_buffer();
+            break;
+            
+        case 2:
+            printf("\nNew lunch break start (HH:MM): ");
+            if (scanf("%d:%d", &day->lunch_start_hour, &day->lunch_start_min) != 2) {
+                clear_input_buffer();
+                printf("Invalid format\n");
+                free(entries);
+                return;
+            }
+            clear_input_buffer();
+            break;
+            
+        case 3:
+            printf("\nNew lunch break end (HH:MM): ");
+            if (scanf("%d:%d", &day->lunch_end_hour, &day->lunch_end_min) != 2) {
+                clear_input_buffer();
+                printf("Invalid format\n");
+                free(entries);
+                return;
+            }
+            clear_input_buffer();
+            break;
+            
+        case 4:
+            printf("\nNew departure time (HH:MM): ");
+            if (scanf("%d:%d", &day->end_hour, &day->end_min) != 2) {
+                clear_input_buffer();
+                printf("Invalid format\n");
+                free(entries);
+                return;
+            }
+            clear_input_buffer();
+            break;
+            
+        case 5:
+            printf("\nNew arrival time (HH:MM): ");
+            if (scanf("%d:%d", &day->start_hour, &day->start_min) != 2) {
+                clear_input_buffer();
+                printf("Invalid format\n");
+                free(entries);
+                return;
+            }
+            clear_input_buffer();
+            
+            printf("New lunch break start (HH:MM): ");
+            if (scanf("%d:%d", &day->lunch_start_hour, &day->lunch_start_min) != 2) {
+                clear_input_buffer();
+                printf("Invalid format\n");
+                free(entries);
+                return;
+            }
+            clear_input_buffer();
+            
+            printf("New lunch break end (HH:MM): ");
+            if (scanf("%d:%d", &day->lunch_end_hour, &day->lunch_end_min) != 2) {
+                clear_input_buffer();
+                printf("Invalid format\n");
+                free(entries);
+                return;
+            }
+            clear_input_buffer();
+            
+            printf("New departure time (HH:MM): ");
+            if (scanf("%d:%d", &day->end_hour, &day->end_min) != 2) {
+                clear_input_buffer();
+                printf("Invalid format\n");
+                free(entries);
+                return;
+            }
+            clear_input_buffer();
+            break;
+            
+        case 6:
+            printf("\nAre you sure you want to delete this entry? (y/n): ");
+            char confirm;
+            scanf("%c", &confirm);
+            clear_input_buffer();
+            
+            if (confirm == 'y' || confirm == 'Y') {
+                // Remove entry from array
+                for (int i = index; i < count - 1; i++) {
+                    entries[i] = entries[i + 1];
+                }
+                count--;
+                
+                // Rewrite file
+                FILE *write_file = fopen(data_file_path, "wb");
+                if (write_file) {
+                    fwrite(entries, sizeof(WorkDay), count, write_file);
+                    fclose(write_file);
+                    printf("✓ Entry deleted.\n");
+                } else {
+                    printf("Error: Unable to save changes\n");
+                }
+            }
+            free(entries);
+            return;
+            
+        default:
+            printf("Invalid choice\n");
+            free(entries);
+            return;
+    }
+    
+    // Recalculate worked minutes and excess
+    int start_minutes = time_to_minutes(day->start_hour, day->start_min);
+    int lunch_start_minutes = time_to_minutes(day->lunch_start_hour, day->lunch_start_min);
+    int lunch_end_minutes = time_to_minutes(day->lunch_end_hour, day->lunch_end_min);
+    int end_minutes = time_to_minutes(day->end_hour, day->end_min);
+    
+    int morning_work = lunch_start_minutes - start_minutes;
+    int afternoon_work = end_minutes - lunch_end_minutes;
+    day->worked_minutes = morning_work + afternoon_work;
+    
+    int required_minutes = REQUIRED_HOURS * 60 + REQUIRED_MINUTES;
+    day->excess_minutes = day->worked_minutes - required_minutes;
+    
+    // Rewrite file with updated data
+    FILE *write_file = fopen(data_file_path, "wb");
+    if (write_file) {
+        fwrite(entries, sizeof(WorkDay), count, write_file);
+        fclose(write_file);
+        
+        printf("\n✓ Entry updated!\n");
+        printf("===========================================\n");
+        printf("Date:            %s\n", day->date);
+        printf("Arrival:         %02d:%02d\n", day->start_hour, day->start_min);
+        printf("Lunch break:     %02d:%02d - %02d:%02d\n", 
+               day->lunch_start_hour, day->lunch_start_min,
+               day->lunch_end_hour, day->lunch_end_min);
+        printf("Departure:       %02d:%02d\n", day->end_hour, day->end_min);
+        printf("-------------------------------------------\n");
+        printf("Time worked:     %02d:%02d\n", day->worked_minutes / 60, day->worked_minutes % 60);
+        printf("Required:        %02d:%02d\n", REQUIRED_HOURS, REQUIRED_MINUTES);
+        printf("Difference:      ");
+        print_time_diff(day->excess_minutes);
+        printf("\n===========================================\n");
+    } else {
+        printf("Error: Unable to save changes\n");
+    }
+    
+    free(entries);
+}
+
 void show_current_status() {
     WorkDay day;
     
@@ -511,40 +773,95 @@ void show_current_status() {
 
 void show_history() {
     FILE *file = fopen(data_file_path, "rb");
-    if (!file) {
+    WorkDay temp_day;
+    int has_temp = load_temp_day(&temp_day);
+    
+    if (!file && !has_temp) {
         printf("\nNo history found.\n");
         return;
     }
     
     WorkDay day;
     int total_excess = 0;
+    int count = 0;
     
     printf("\n========================================================================================================\n");
     printf("Date       | Start  | Lunch      | End    | Time worked     | Required | Difference\n");
     printf("========================================================================================================\n");
     
-    while (fread(&day, sizeof(WorkDay), 1, file) == 1) {
-        printf("%s | %02d:%02d  | %02d:%02d-%02d:%02d | %02d:%02d  | %02d:%02d           | %02d:%02d    | ",
-               day.date,
-               day.start_hour, day.start_min,
-               day.lunch_start_hour, day.lunch_start_min,
-               day.lunch_end_hour, day.lunch_end_min,
-               day.end_hour, day.end_min,
-               day.worked_minutes / 60, day.worked_minutes % 60,
-               REQUIRED_HOURS, REQUIRED_MINUTES);
+    // Read all completed days from file
+    if (file) {
+        while (fread(&day, sizeof(WorkDay), 1, file) == 1) {
+            printf("%s | %02d:%02d  | %02d:%02d-%02d:%02d | %02d:%02d  | %02d:%02d           | %02d:%02d    | ",
+                   day.date,
+                   day.start_hour, day.start_min,
+                   day.lunch_start_hour, day.lunch_start_min,
+                   day.lunch_end_hour, day.lunch_end_min,
+                   day.end_hour, day.end_min,
+                   day.worked_minutes / 60, day.worked_minutes % 60,
+                   REQUIRED_HOURS, REQUIRED_MINUTES);
+            
+            print_time_diff(day.excess_minutes);
+            printf("\n");
+            
+            total_excess += day.excess_minutes;
+            count++;
+        }
+        fclose(file);
+    }
+    
+    // Show day in progress if it exists
+    if (has_temp) {
+        printf("%s | ", temp_day.date);
         
-        print_time_diff(day.excess_minutes);
-        printf("\n");
+        // Show what's been recorded
+        if (temp_day.state >= STATE_STARTED) {
+            printf("%02d:%02d  | ", temp_day.start_hour, temp_day.start_min);
+        } else {
+            printf("--:--  | ");
+        }
         
-        total_excess += day.excess_minutes;
+        if (temp_day.state >= STATE_LUNCH_START && temp_day.state >= STATE_LUNCH_END) {
+            printf("%02d:%02d-%02d:%02d | ", 
+                   temp_day.lunch_start_hour, temp_day.lunch_start_min,
+                   temp_day.lunch_end_hour, temp_day.lunch_end_min);
+        } else if (temp_day.state >= STATE_LUNCH_START) {
+            printf("%02d:%02d-??:?? | ", 
+                   temp_day.lunch_start_hour, temp_day.lunch_start_min);
+        } else {
+            printf("--:-----:-- | ");
+        }
+        
+        if (temp_day.state >= STATE_LUNCH_END) {
+            // Calculate expected end time
+            int required_minutes = REQUIRED_HOURS * 60 + REQUIRED_MINUTES;
+            int lunch_duration = time_to_minutes(temp_day.lunch_end_hour, temp_day.lunch_end_min) - 
+                                 time_to_minutes(temp_day.lunch_start_hour, temp_day.lunch_start_min);
+            int start_minutes = time_to_minutes(temp_day.start_hour, temp_day.start_min);
+            int end_minutes = start_minutes + required_minutes + lunch_duration;
+            int end_hour, end_min;
+            minutes_to_time(end_minutes, &end_hour, &end_min);
+            
+            printf("~%02d:%02d | ", end_hour, end_min);
+        } else {
+            printf("??:?? | ");
+        }
+        
+        printf("IN PROGRESS     | %02d:%02d    | IN PROGRESS\n", REQUIRED_HOURS, REQUIRED_MINUTES);
     }
     
     printf("========================================================================================================\n");
-    printf("TOTAL MONTH EXCESS: ");
-    print_time_diff(total_excess);
-    printf("\n========================================================================================================\n");
     
-    fclose(file);
+    if (count > 0) {
+        printf("TOTAL MONTH EXCESS: ");
+        print_time_diff(total_excess);
+        if (has_temp) {
+            printf(" (excluding day in progress)");
+        }
+        printf("\n");
+    }
+    
+    printf("========================================================================================================\n");
 }
 
 void reset_data() {
@@ -585,11 +902,12 @@ int main() {
         
         printf("1. %s\n", has_current_day ? "Continue/Complete current day" : "New day");
         printf("2. Add past day\n");
-        printf("3. View current status\n");
-        printf("4. Cancel current day\n");
-        printf("5. View history\n");
-        printf("6. Reset data\n");
-        printf("7. Quit\n");
+        printf("3. Modify entry\n");
+        printf("4. View current status\n");
+        printf("5. Cancel current day\n");
+        printf("6. View history\n");
+        printf("7. Reset data\n");
+        printf("8. Quit\n");
         
         printf("\nChoice: ");
         
@@ -608,9 +926,12 @@ int main() {
                 add_past_day();
                 break;
             case 3:
-                show_current_status();
+                modify_entry();
                 break;
             case 4:
+                show_current_status();
+                break;
+            case 5:
                 if (has_current_day) {
                     delete_temp_day();
                     printf("\n✓ Current day canceled.\n");
@@ -618,13 +939,13 @@ int main() {
                     printf("\nNo day in progress.\n");
                 }
                 break;
-            case 5:
+            case 6:
                 show_history();
                 break;
-            case 6:
+            case 7:
                 reset_data();
                 break;
-            case 7:
+            case 8:
                 printf("\nGoodbye!\n");
                 return 0;
             default:
