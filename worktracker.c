@@ -8,7 +8,7 @@
 #include <pwd.h>
 
 #define DATA_DIR ".local/bin"
-#define DATA_FILE_NAME "timetracker.dat"
+#define DATA_FILE_NAME "worktracker.dat"
 #define TEMP_FILE_NAME "temp_day.tmp"
 #define REQUIRED_HOURS 7
 #define REQUIRED_MINUTES 48
@@ -139,26 +139,71 @@ void save_completed_day(WorkDay *day) {
     int lunch_start_minutes = time_to_minutes(day->lunch_start_hour, day->lunch_start_min);
     int lunch_end_minutes = time_to_minutes(day->lunch_end_hour, day->lunch_end_min);
     int end_minutes = time_to_minutes(day->end_hour, day->end_min);
-    
+
     int morning_work = lunch_start_minutes - start_minutes;
     int afternoon_work = end_minutes - lunch_end_minutes;
     day->worked_minutes = morning_work + afternoon_work;
-    
+
     int required_minutes = REQUIRED_HOURS * 60 + REQUIRED_MINUTES;
     day->excess_minutes = day->worked_minutes - required_minutes;
-    
+
     day->state = STATE_COMPLETED;
-    
-    // Save to history
-    FILE *file = fopen(data_file_path, "ab");
-    if (file) {
-        fwrite(day, sizeof(WorkDay), 1, file);
-        fclose(file);
-        
+
+    // Load all existing entries
+    FILE *read_file = fopen(data_file_path, "rb");
+    WorkDay *entries = NULL;
+    int count = 0;
+    int capacity = 10;
+
+    if (read_file) {
+        entries = malloc(capacity * sizeof(WorkDay));
+        WorkDay temp;
+        while (fread(&temp, sizeof(WorkDay), 1, read_file) == 1) {
+            // Don't copy if we're replacing this date
+            if (strcmp(temp.date, day->date) != 0) {
+                if (count >= capacity) {
+                    capacity *= 2;
+                    entries = realloc(entries, capacity * sizeof(WorkDay));
+                }
+                entries[count++] = temp;
+            }
+        }
+        fclose(read_file);
+    } else {
+        entries = malloc(capacity * sizeof(WorkDay));
+    }
+
+    // Insert new entry in chronological order
+    int insert_pos = count;
+    for (int i = 0; i < count; i++) {
+        if (strcmp(day->date, entries[i].date) < 0) {
+            insert_pos = i;
+            break;
+        }
+    }
+
+    // Shift entries if needed
+    if (count >= capacity) {
+        capacity++;
+        entries = realloc(entries, capacity * sizeof(WorkDay));
+    }
+
+    for (int i = count; i > insert_pos; i--) {
+        entries[i] = entries[i-1];
+    }
+    entries[insert_pos] = *day;
+    count++;
+
+    // Rewrite file
+    FILE *write_file = fopen(data_file_path, "wb");
+    if (write_file) {
+        fwrite(entries, sizeof(WorkDay), count, write_file);
+        fclose(write_file);
+
         printf("\n✓ Day saved!\n");
         printf("===========================================\n");
         printf("Arrival:         %02d:%02d\n", day->start_hour, day->start_min);
-        printf("Lunch break:     %02d:%02d - %02d:%02d\n", 
+        printf("Lunch break:     %02d:%02d - %02d:%02d\n",
                day->lunch_start_hour, day->lunch_start_min,
                day->lunch_end_hour, day->lunch_end_min);
         printf("Departure:       %02d:%02d\n", day->end_hour, day->end_min);
@@ -168,11 +213,13 @@ void save_completed_day(WorkDay *day) {
         printf("Difference:      ");
         print_time_diff(day->excess_minutes);
         printf("\n===========================================\n");
-        
+
         delete_temp_day();
     } else {
         printf("Error: Unable to save data\n");
     }
+
+    free(entries);
 }
 
 void calculate_end_time(WorkDay *day) {
@@ -192,14 +239,14 @@ void calculate_end_time(WorkDay *day) {
 
 void enter_day_data() {
     is_editing = 1;
-    
+
     // Load temporary data if it exists
     int has_temp = load_temp_day(&current_day);
-    
+
     if (has_temp) {
         printf("\n=== RESUMING DAY: %s ===\n", current_day.date);
         printf("\n📌 Already recorded:\n");
-        
+
         if (current_day.state >= STATE_STARTED) {
             printf("✓ Arrival: %02d:%02d\n", current_day.start_hour, current_day.start_min);
         }
@@ -214,6 +261,29 @@ void enter_day_data() {
         // Initialize a new day
         current_day = (WorkDay){0};
         get_current_date(current_day.date);
+
+        // Check if this date already exists in completed history
+        FILE *file = fopen(data_file_path, "rb");
+        if (file) {
+            WorkDay existing;
+            while (fread(&existing, sizeof(WorkDay), 1, file) == 1) {
+                if (strcmp(existing.date, current_day.date) == 0) {
+                    fclose(file);
+                    printf("\n⚠️  An entry already exists for today (%s)!\n", current_day.date);
+                    printf("Arrival: %02d:%02d, Departure: %02d:%02d\n",
+                           existing.start_hour, existing.start_min,
+                           existing.end_hour, existing.end_min);
+                    printf("Time worked: %02d:%02d\n\n",
+                           existing.worked_minutes / 60, existing.worked_minutes % 60);
+                    printf("You cannot create a new entry for today.\n");
+                    printf("Please use option 3 (Modify entry) if you need to change it.\n");
+                    is_editing = 0;
+                    return;
+                }
+            }
+            fclose(file);
+        }
+
         current_day.state = STATE_NEW;
         printf("\n=== NEW DAY: %s ===\n", current_day.date);
     }

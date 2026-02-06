@@ -10,7 +10,7 @@ $(TARGET): $(SRC)
 	$(CC) $(CFLAGS) -o $(TARGET) $(SRC)
 
 clean:
-	rm -f $(TARGET) timetracker.dat
+	rm -f $(TARGET) worktracker.dat
 
 run: $(TARGET)
 	./$(TARGET)
